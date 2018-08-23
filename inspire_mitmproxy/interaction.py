@@ -36,7 +36,7 @@ match one of the services defined in :attr:`inspire_mitmproxy.services`. Name of
 can be anything, and is only for informative purposes. When recorded automatically, interactions
 are named in sequence of `interaction_0.yaml`, `interaction_1.yaml`, and so on.
 """
-
+import math
 from functools import singledispatch
 from logging import getLogger
 from os.path import expandvars
@@ -78,6 +78,7 @@ class Interaction:
     DEFAULT_EXACT_MATCH_FIELDS: List[str] = ['url', 'method', 'body']
     DEFAULT_REGEX_MATCH_FIELDS: Dict[str, Pattern[str]] = {}
     DEFAULT_CALLBACK_DELAY = 0.5
+    DEFAULT_MAX_REPLAY = math.inf
 
     DEFAULT_NAME_PATTERN = 'interaction_{}'
     DEFAULT_NAME_MATCH_REGEX = compile(r'^interaction_(\d+)$')
@@ -89,12 +90,14 @@ class Interaction:
         response: MITMResponse,
         match: Optional[dict] = None,
         callbacks: Optional[List[dict]] = None,
+        max_replay: Optional[int] = None,
     ) -> None:
         self.name = name
         self.request = request
         self.response = response
         self.match = match or {}
         self.callbacks = callbacks or []
+        self.max_replay = max_replay or math.inf
 
     @classmethod
     def from_file(cls, interaction_file: Optional[Path]) -> 'Interaction':
@@ -107,6 +110,7 @@ class Interaction:
             response=MITMResponse.from_dict(interaction_dict['response']),
             match=interaction_dict.get('match'),
             callbacks=interaction_dict.get('callbacks'),
+            max_replay=interaction_dict.get('max_replay')
         )
 
     def to_dict(self) -> dict:
@@ -115,6 +119,7 @@ class Interaction:
             'response': self.response.to_dict(),
             'match': self.match,
             'callbacks': self.callbacks,
+            'max_replay': self.max_replay,
         }
 
         return serialized_interaction

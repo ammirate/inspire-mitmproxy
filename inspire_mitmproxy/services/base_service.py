@@ -55,9 +55,12 @@ class BaseService:
 
         return host in self.hosts_list
 
-    def _get_first_matching_interaction(self, request):
+    def _can_replay(self, interaction: Interaction) -> bool:
+        return interaction.max_replay > self.get_interaction_count(interaction.name)
+
+    def _get_matching_interaction(self, request):
         for interaction in self.get_interactions_for_active_scenario():
-            if interaction.matches_request(request):
+            if interaction.matches_request(request) and self._can_replay(interaction):
                 return interaction
 
     def _raise_do_not_intercept_if_recording(self, request):
@@ -66,7 +69,7 @@ class BaseService:
 
     def process_request(self, request):
         try:
-            matched_interaction = self._get_first_matching_interaction(request)
+            matched_interaction = self._get_matching_interaction(request)
         except ScenarioNotInService:
             self._raise_do_not_intercept_if_recording(request)
             raise
@@ -104,6 +107,9 @@ class BaseService:
                 interaction_name,
                 {'num_calls': 1},
             )
+
+    def get_interaction_count(self, interaction_name: str) -> int:
+        return self.interactions_replayed[interaction_name]['num_calls']
 
     def get_path_for_active_scenario_dir(self, create=False) -> Path:
         scenarios_path = Path(environ.get('SCENARIOS_PATH', './scenarios/'))
